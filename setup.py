@@ -20,7 +20,7 @@ setup(
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='kalman',
-    maintainer_email='samuele.sandrini@polito.it',
+    maintainer_email='samuele.sandrini@stiima.cnr.it',
     description='Drims2 Homework Package',
     license='Apache License 2.0',
     tests_require=['pytest'],

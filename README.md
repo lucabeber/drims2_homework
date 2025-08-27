@@ -23,4 +23,3 @@ The repository is **work in progress** — more components and examples will be 
 - Fork this repository  
 - Work together in teams  
 - Start experimenting, learning, and **have fun!** 😃
-

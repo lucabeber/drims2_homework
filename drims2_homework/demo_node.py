@@ -4,6 +4,7 @@ from geometry_msgs.msg import PoseStamped
 from drims2_motion_server.motion_client import MotionClient
 from drims2_msgs.srv import DiceIdentification
 from moveit_msgs.msg import MoveItErrorCodes
+from typing import Tuple
 
 HANDE_ACTION_NAME = '/gripper_action_controller/gripper_cmd'
 
@@ -13,7 +14,7 @@ class VisionClientNode(Node):
         self.dice_identification_client = self.create_client(DiceIdentification, 
                                                              'dice_identification')
 
-    def dice_identification(self):
+    def dice_identification(self) -> Tuple[int, PoseStamped, bool]:
         if not self.dice_identification_client.wait_for_service(timeout_sec=5.0):
             raise RuntimeError("DiceIdentification service not available")
 
@@ -45,11 +46,11 @@ def main():
 
     logger.info("Moving to home configuration...")
     result = motion_client_node.move_to_joint(home_joints)
-    logger.info(f"Home reached: {result}")
+    logger.info(f"Home reached: {result.val}")
     reached_goal, stalled = motion_client_node.gripper_command(position=0.045)  # Open gripper
     
-    if result != MoveItErrorCodes.SUCCESS:
-        logger.error(f"Failed to reach home configuration: {result}")
+    if result.val != MoveItErrorCodes.SUCCESS:
+        logger.error(f"Failed to reach home configuration: {result.val}")
         motion_client_node.destroy_node()
         vision_client_node.destroy_node()
         demo_node.destroy_node()
@@ -81,16 +82,16 @@ def main():
 
 
     logger.info("Moving to pick pose...")
-    result = motion_client_node.move_to_pose(pick_pose, cartesian_motion=True)
-    if result != MoveItErrorCodes.SUCCESS:
-        logger.error(f"Failed to reach home configuration: {result}")
+    result = motion_client_node.move_to_pose(pick_pose, cartesian_motion=False)
+    if result.val != MoveItErrorCodes.SUCCESS:
+        logger.error(f"Failed to reach home configuration: {result.val}")
         motion_client_node.destroy_node()
         vision_client_node.destroy_node()
         demo_node.destroy_node()
         rclpy.shutdown()
         return 0
 
-    logger.info(f"Pick pose reached: {result}")
+    logger.info(f"Pick pose reached: {result.val}")
 
     # --- 3) Close gripper + attach object ---
     logger.info("Closing gripper...")
@@ -114,10 +115,10 @@ def main():
     place_pose.pose.orientation.w = 1.0
 
     logger.info("Moving to place pose...")
-    result = motion_client_node.move_to_pose(place_pose, cartesian_motion=True)
-    logger.info(f"Place pose reached: {result}")
-    if result != MoveItErrorCodes.SUCCESS:
-        logger.error(f"Failed to reach home configuration: {result}")
+    result = motion_client_node.move_to_pose(place_pose, cartesian_motion=False)
+    logger.info(f"Place pose reached: {result.val}")
+    if result.val != MoveItErrorCodes.SUCCESS:
+        logger.error(f"Failed to reach home configuration: {result.val}")
         motion_client_node.destroy_node()
         vision_client_node.destroy_node()
         demo_node.destroy_node()
