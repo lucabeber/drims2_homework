@@ -1,7 +1,17 @@
 <root BTCPP_format="4" >
      <BehaviorTree ID="MainTree">
         <Sequence>
+            <Script code="target_face:=1" />
             <DiceIdentification service_name="/dice_identification" face_number="{face}" />
+            <!-- 
+            
+            <Inverter>
+                <CheckDiceFace target_face="{target_face}" face="{face}"/>
+            </Inverter> 
+            
+            <MoveToJoint action_name="/move_to_joint" joint_target="1.57;-1.57;1.57;-1.57;-1.57;0.0"/>
+            -->
+            
             <Sleep msec="500" />
             
             <GripperCommand action_name="/gripper_action_controller/gripper_cmd" position="0.045" max_effort="1.0"/>
@@ -15,6 +25,9 @@
             <DetachObject service_name="/detach_object" object_id="dice"/>
             
             <MoveToPose action_name="/move_to_pose" cartesian_motion="false" frame_id="tip" position="0.0;0.0;-0.1" orientation="0.0;0.0;0.0;1.0"/>
+            
+
+
         </Sequence>
      </BehaviorTree>
  </root>
