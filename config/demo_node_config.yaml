@@ -1,0 +1,4 @@
+demo_node:
+  ros__parameters:
+    demo_parameter: demo_param_value
+    # Put HERE parameters if you need

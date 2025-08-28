@@ -27,7 +27,7 @@ def generate_launch_description():
 
     demo_node_config_path_cmd = DeclareLaunchArgument(
         'demo_node_config_path',
-        default_value=pkg_dir + '/config/demo_node_config_path.yaml',
+        default_value=pkg_dir + '/config/demo_node_config.yaml',
         description='Full path to the demo node config path config file')
 
     demo_node = Node(
@@ -36,7 +36,7 @@ def generate_launch_description():
         name='demo_node',
         output='screen',
         parameters=[
-            LaunchConfiguration('demo_node_config_path'),
+            LaunchConfiguration('demo_node_config'),
         ])
     
     ld = LaunchDescription()
