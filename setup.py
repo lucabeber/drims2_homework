@@ -27,6 +27,7 @@ setup(
     entry_points={
         'console_scripts': [
             'demo_node = drims2_homework.demo_node:main',
+            'challenge_node = drims2_homework.challenge_node:main'
         ],
     },
 )
