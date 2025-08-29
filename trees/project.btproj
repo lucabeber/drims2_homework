@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4" project_name="Project">
+    <!-- Description of Node Models (used by Groot) -->
+    <TreeNodesModel>
+        <Action ID="AttachObject" editable="true">
+            <input_port name="service_name"/>
+            <input_port name="object_id"/>
+            <input_port name="target_frame_id"/>
+        </Action>
+        <Action ID="CheckDiceFace" editable="true">
+            <input_port name="target_face"/>
+            <input_port name="face"/>
+        </Action>
+        <Action ID="DetachObject" editable="true">
+            <input_port name="service_name"/>
+            <input_port name="object_id"/>
+        </Action>
+        <Action ID="DiceIdentification" editable="true">
+            <input_port name="service_name"/>
+            <output_port name="face_number"/>
+            <output_port name="pose"/>
+        </Action>
+        <Action ID="GripperCommand" editable="true">
+            <input_port name="action_name"/>
+            <input_port name="position"/>
+            <input_port name="max_effort"/>
+        </Action>
+        <Action ID="MoveToJoint" editable="true">
+            <input_port name="action_name"/>
+            <input_port name="joint_target"/>
+        </Action>
+        <Action ID="MoveToPose" editable="true">
+            <input_port name="action_name"/>
+            <input_port name="cartesian_motion"/>
+            <input_port name="pose_target"/>
+            <input_port name="frame_id"/>
+            <input_port name="position"/>
+            <input_port name="orientation"/>
+        </Action>
+    </TreeNodesModel>
+</root>
