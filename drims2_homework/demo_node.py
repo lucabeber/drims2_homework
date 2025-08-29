@@ -6,7 +6,7 @@ from drims2_msgs.srv import DiceIdentification
 from moveit_msgs.msg import MoveItErrorCodes
 from typing import Tuple
 
-HANDE_ACTION_NAME = '/gripper_action_controller/gripper_cmd'
+GRIPPER_ACTION_NAME = '/gripper_action_controller/gripper_cmd'
 
 class VisionClientNode(Node):
     def __init__(self):
@@ -35,7 +35,7 @@ def main():
     rclpy.init()
 
     # MotionClient is already a Node, so we can use its logger directly
-    motion_client_node = MotionClient(gripper_action_name=HANDE_ACTION_NAME)
+    motion_client_node = MotionClient(gripper_action_name=GRIPPER_ACTION_NAME)
     vision_client_node = VisionClientNode()
     demo_node          = rclpy.create_node(node_name="demo_node", use_global_arguments=False)
 
