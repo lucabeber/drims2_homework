@@ -36,7 +36,7 @@ def generate_launch_description():
         name='demo_node',
         output='screen',
         parameters=[
-            LaunchConfiguration('demo_node_config'),
+            LaunchConfiguration('demo_node_config_path'),
         ])
     
     ld = LaunchDescription()
