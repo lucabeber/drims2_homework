@@ -11,19 +11,23 @@ from sensor_msgs.msg import JointState
 import time
 HANDE_ACTION_NAME = '/gripper_action_controller/gripper_cmd'
 
-home_joints = [1.57, -1.57, 1.57, -1.57, -1.57, 0.0]
+home_joints = [85, -90, 140, -140, -90, 0]
+home_joints = [math.radians(j) for j in home_joints]
 eval_pos = [50, -74, 111, -37, -40, 0]
 eval_pos = [math.radians(j) for j in eval_pos]
 
 place_pos_rotate_nearing = [50, -75, 110, -35, -40, 0]
 place_pos_rotate_nearing = [math.radians(j) for j in place_pos_rotate_nearing]
-place_pos_rotate = [50, -55, 116, -61, -40, 0]
+place_pos_rotate = [85, -50, 92, -72, -100, -4]
 place_pos_rotate = [math.radians(j) for j in place_pos_rotate]
 
 place_pos_nearing = [7, -109, -105, -56, 90, -167]
 place_pos_nearing = [math.radians(j) for j in place_pos_nearing]
 place_pos = [7, -116, -109, -45, 90, -167]
 place_pos = [math.radians(j) for j in place_pos]
+
+open_gripper_cmd = 0.05
+close_gripper_cmd = 0.035
 
 def scipy_rotation(initial_quaternion, axis, angle_degrees):
     initial_quat_array = np.array([
@@ -64,12 +68,14 @@ def pose_movement(node, logger, motion_client_node, pose_msg, pose_name, axis, r
     near_pose = PoseStamped()
     near_pose.header.frame_id = "checkerboard"
     near_pose.header.stamp = node.get_clock().now().to_msg()
-    near_pose.pose = pose_msg.pose
-    # near_pose.pose.position.x = pose_msg.pose.position.y
-    # near_pose.pose.position.y = - pose_msg.pose.position.x
-    near_pose.pose.position.x = 0.0
-    near_pose.pose.position.y = 0.0
-    near_pose.pose.position.z -= 0.05  # Approach from 5 cm above
+    near_pose.pose.x = pose_msg.pose.position.y
+    near_pose.pose.y = - pose_msg.pose.position.x
+    near_pose.pose.z = pose_msg.pose.position.z - 0.05  # Approach from 5 cm above
+    near_pose.pose.orientation.x = pose_msg.pose.orientation.x
+    near_pose.pose.orientation.y = pose_msg.pose.orientation.y
+    near_pose.pose.orientation.z = pose_msg.pose.orientation.z 
+    near_pose.pose.orientation.w = pose_msg.pose.orientation.w
+    
     final_quat_list = [pose_msg.pose.orientation.x,
                        pose_msg.pose.orientation.y,
                        pose_msg.pose.orientation.z,
@@ -133,12 +139,12 @@ def state_10_callback(demo_node, logger, motion_client_node, vision_client_node,
         
         # close gripper and attach object
         logger.info("Closing gripper...")
-        reached_goal, stalled = motion_client_node.gripper_command(position=0.20)  # 0.0 = closed
+        reached_goal, stalled = motion_client_node.gripper_command(position = close_gripper_cmd)  # 0.0 = closed
         logger.info(f"Gripper closed (reached_goal={reached_goal}, stalled={stalled})")
 
-        logger.info("Attaching object...")
-        success = motion_client_node.attach_object("dice", "tool0")  # "tool0" is the default TCP frame of UR10e
-        logger.info(f"Attach success: {success}")
+        # logger.info("Attaching object...")
+        # success = motion_client_node.attach_object("dice", "tool0")  # "tool0" is the default TCP frame of UR10e
+        # logger.info(f"Attach success: {success}")
 
         # move to place position (rotate    )
         logger.info("Moving to rotate configuration...")
@@ -153,12 +159,12 @@ def state_10_callback(demo_node, logger, motion_client_node, vision_client_node,
         
         # open gripper and detach object
         logger.info("Opening gripper...")
-        reached_goal, stalled = motion_client_node.gripper_command(position=0.045)  # 0.045 = open, adjust depending on gripper model
+        reached_goal, stalled = motion_client_node.gripper_command(position = open_gripper_cmd)
         logger.info(f"Gripper opened (reached_goal={reached_goal}, stalled={stalled})")
 
-        logger.info("Detaching object...")
-        success = motion_client_node.detach_object("dice")
-        logger.info(f"Detach success: {success}")
+        # logger.info("Detaching object...")
+        # success = motion_client_node.detach_object("dice")
+        # logger.info(f"Detach success: {success}")
 
         # move to safe position
         logger.info("Moving to nearing place configuration...")
@@ -175,7 +181,7 @@ def state_10_callback(demo_node, logger, motion_client_node, vision_client_node,
     new_state = 0
     return new_state,result
 
-def state_20_callback ( demo_node, logger, motion_client_node, vision_client_node, die_pose, desired_num):
+def state_20_callback ( demo_node, logger, motion_client_node, die_pose):
     pick_pose = die_pose
     result = pose_movement(demo_node, logger, motion_client_node, pick_pose, "pick pose", ['y'], [180])
     if result != MoveItErrorCodes.SUCCESS:
@@ -184,95 +190,96 @@ def state_20_callback ( demo_node, logger, motion_client_node, vision_client_nod
     
     # close gripper and attach object
     logger.info("Closing gripper...")
-    reached_goal, stalled = motion_client_node.gripper_command(position=0.20)  # 0.0 = closed
+    reached_goal, stalled = motion_client_node.gripper_command(position = close_gripper_cmd)  # 0.0 = closed
     logger.info(f"Gripper closed (reached_goal={reached_goal}, stalled={stalled})")
 
-    logger.info("Attaching object...")
-    success = motion_client_node.attach_object("dice", "tool0")  # "tool0" is the default TCP frame of UR10e
-    logger.info(f"Attach success: {success}")
+    # logger.info("Attaching object...")
+    # success = motion_client_node.attach_object("dice", "tool0")  # "tool0" is the default TCP frame of UR10e
+    # logger.info(f"Attach success: {success}")
 
     # move to place position (rotate    )
     logger.info("Moving to rotate configuration...")
     result = motion_client_node.move_to_joint(place_pos_rotate_nearing)
-    if result != MoveItErrorCodes.SUCCESS:
-        logger.error(f"Failed to reach nearing rotate configuration: {result}")
-        return -1, result
+    # if result.val != MoveItErrorCodes.SUCCESS:
+    #     logger.error(f"Failed to reach nearing rotate configuration: {result}")
+    #     return -1, result
 
-    num, pick_pose, success = vision_client_node.dice_identification()
-    if not success:
-        logger.error("Failed to identify dice.")
-        return -1, None
-    if num == desired_num or num + desired_num == 7:
-        return_value = 0
-    else:
-        return_value = 1
+    # num, pick_pose, success = vision_client_node.dice_identification()
+    # if not success:
+    #     logger.error("Failed to identify dice.")
+    #     return -1, None
+    # if num == desired_num or num + desired_num == 7:
+    #     return_value = 0
+    # else:
+    #     return_value = 1
 
     result = motion_client_node.move_to_joint(place_pos_rotate)
-    if result != MoveItErrorCodes.SUCCESS:
-        logger.error(f"Failed to reach rotate configuration: {result}")
-        return -1, result
+    # if result.val != MoveItErrorCodes.SUCCESS:
+    #     logger.error(f"Failed to reach rotate configuration: {result}")
+    #     return -1, result
     
     # open gripper and detach object
     logger.info("Opening gripper...")
-    reached_goal, stalled = motion_client_node.gripper_command(position=0.045)  # 0.045 = open, adjust depending on gripper model
+    reached_goal, stalled = motion_client_node.gripper_command(position =  open_gripper_cmd) # 0.045 = open, adjust depending on gripper model
     logger.info(f"Gripper opened (reached_goal={reached_goal}, stalled={stalled})")
 
-    logger.info("Detaching object...")
-    success = motion_client_node.detach_object("dice")
-    logger.info(f"Detach success: {success}")
+    # logger.info("Detaching object...")
+    # success = motion_client_node.detach_object("dice")
+    # logger.info(f"Detach success: {success}")
 
     # move to safe position
     logger.info("Moving to nearing place configuration...")
     result = motion_client_node.move_to_joint(place_pos_nearing)
-    if result != MoveItErrorCodes.SUCCESS:
-        logger.error(f"Failed to reach nearing place configuration: {result}")
-        return -1, result
+    # if result != MoveItErrorCodes.SUCCESS:
+    #     logger.error(f"Failed to reach nearing place configuration: {result}")
+    #     return -1, result
     
     new_state = 0
-    return return_value, new_state, result
+    return new_state, result
+
 def state_30_callback ( demo_node, logger, motion_client_node, vision_client_node, die_pose):
     pick_pose = die_pose
     result = pose_movement(demo_node, logger, motion_client_node, pick_pose, "pick pose", ['y', 'z'], [180,90])
-    if result != MoveItErrorCodes.SUCCESS:
-        logger.error(f"Failed to reach pick pose: {result}")
-        return -1, result
+    # if result != MoveItErrorCodes.SUCCESS:
+    #     logger.error(f"Failed to reach pick pose: {result}")
+    #     return -1, result
     
     # close gripper and attach object
     logger.info("Closing gripper...")
-    reached_goal, stalled = motion_client_node.gripper_command(position=0.20)  # 0.0 = closed
+    reached_goal, stalled = motion_client_node.gripper_command(position = close_gripper_cmd)  # 0.0 = closed
     logger.info(f"Gripper closed (reached_goal={reached_goal}, stalled={stalled})")
 
-    logger.info("Attaching object...")
-    success = motion_client_node.attach_object("dice", "tool0")  # "tool0" is the default TCP frame of UR10e
-    logger.info(f"Attach success: {success}")
+    # logger.info("Attaching object...")
+    # success = motion_client_node.attach_object("dice", "tool0")  # "tool0" is the default TCP frame of UR10e
+    # logger.info(f"Attach success: {success}")
 
     # move to place position (rotate    )
     logger.info("Moving to rotate configuration...")
     result = motion_client_node.move_to_joint(place_pos_rotate_nearing)
-    if result != MoveItErrorCodes.SUCCESS:
-        logger.error(f"Failed to reach nearing rotate configuration: {result}")
-        return -1, result
+    # if result != MoveItErrorCodes.SUCCESS:
+    #     logger.error(f"Failed to reach nearing rotate configuration: {result}")
+    #     return -1, result
 
     result = motion_client_node.move_to_joint(place_pos_rotate)
-    if result != MoveItErrorCodes.SUCCESS:
-        logger.error(f"Failed to reach rotate configuration: {result}")
-        return -1, result
+    # if result != MoveItErrorCodes.SUCCESS:
+    #     logger.error(f"Failed to reach rotate configuration: {result}")
+    #     return -1, result
     
     # open gripper and detach object
     logger.info("Opening gripper...")
-    reached_goal, stalled = motion_client_node.gripper_command(position=0.045)  # 0.045 = open, adjust depending on gripper model
+    reached_goal, stalled = motion_client_node.gripper_command(position = open_gripper_cmd)  # 0.045 = open, adjust depending on gripper model
     logger.info(f"Gripper opened (reached_goal={reached_goal}, stalled={stalled})")
 
-    logger.info("Detaching object...")
-    success = motion_client_node.detach_object("dice")
-    logger.info(f"Detach success: {success}")
+    # logger.info("Detaching object...")
+    # success = motion_client_node.detach_object("dice")
+    # logger.info(f"Detach success: {success}")
 
     # move to safe position
     logger.info("Moving to nearing place configuration...")
     result = motion_client_node.move_to_joint(place_pos_nearing)
-    if result != MoveItErrorCodes.SUCCESS:
-        logger.error(f"Failed to reach nearing place configuration: {result}")
-        return -1, result
+    # if result != MoveItErrorCodes.SUCCESS:
+    #     logger.error(f"Failed to reach nearing place configuration: {result}")
+    #     return -1, result
     
     new_state = 0
     return new_state, result
@@ -332,10 +339,10 @@ def main():
     # --- 0) Move to home configuration and open gripper---
     
     print(eval_pos)
-    # logger.info("Moving to home configuration...")
-    # result = motion_client_node.move_to_joint(home_joints)
-    # logger.info(f"Home reached: {result}")
-    # reached_goal, stalled = motion_client_node.gripper_command(position=0.045)  # Open gripper
+    logger.info("Moving to home configuration...")
+    result = motion_client_node.move_to_joint(home_joints)
+    logger.info(f"Home reached: {result}")
+    reached_goal, stalled = motion_client_node.gripper_command(position = open_gripper_cmd)  # Open gripper
     
     # if result != MoveItErrorCodes.SUCCESS:
     #     logger.error(f"Failed to reach home configuration: {result}")
@@ -355,274 +362,65 @@ def main():
     # --------------------------------------------------------------------------------
     desired_num = 1
     # --------------------------------------------------------------------------------
-    # while state != 100:
-    #     # Dice identification
-    #     if state == 0:
-    #         logger.info("State 0: Starting die identification")
-    #         read_num, die_pose, state, success = state_0_callback(vision_client_node, logger, desired_num, rot_cnt)
-    #         if not success:
-    #             logger.error('Dice identification failed')
-    #             motion_client_node.destroy_node()
-    #             vision_client_node.destroy_node()
-    #             demo_node.destroy_node()
-    #             rclpy.shutdown()
-    #             return 0
-    #     if state == 10:
-    #         logger.info("State 10: flipping the die")
-    #         state, result = state_10_callback(demo_node, logger, motion_client_node, vision_client_node, die_pose)
-    #         if result != MoveItErrorCodes.SUCCESS:
-    #             logger.error(f"Failed to reach home configuration: {result}")
-    #             motion_client_node.destroy_node()
-    #             vision_client_node.destroy_node()
-    #             demo_node.destroy_node()
-    #             rclpy.shutdown()
-    #             return 0
-    #         logger.info("Flip completed, back to die evaluation")
-    #     if state == 20:
-    #         logger.info("State 20: evaluating next rotations to do")
-    #         rot_cnt, state, result = state_20_callback(demo_node, logger, motion_client_node, vision_client_node, die_pose, desired_num)
-    #         if result != MoveItErrorCodes.SUCCESS:
-    #             logger.error(f"Failed to reach home configuration: {result}")
-    #             motion_client_node.destroy_node()
-    #             vision_client_node.destroy_node()
-    #             demo_node.destroy_node()
-    #             rclpy.shutdown()
-    #             return 0
-    #         logger.info("evaluation completed, back to die evaluation")
-    #     if state == 30:
-    #         rot_cnt = 0
-    #         state, result = state_30_callback(demo_node, logger, motion_client_node, vision_client_node, die_pose)
-    #         if result != MoveItErrorCodes.SUCCESS:
-    #             logger.error(f"Failed to reach home configuration: {result}")
-    #             motion_client_node.destroy_node()
-    #             vision_client_node.destroy_node()
-    #             demo_node.destroy_node()
-    #             rclpy.shutdown()
-    #             return 0
-    #         logger.info("rotation complete, back to evaluation")
+    while state != 100:
+        # Dice identification
+        if state == 0:
+            logger.info("State 0: Starting die identification")
+            read_num, die_pose, state, success = state_0_callback(vision_client_node, logger, desired_num, rot_cnt)
+            if not success:
+                logger.error('Dice identification failed')
+                motion_client_node.destroy_node()
+                vision_client_node.destroy_node()
+                demo_node.destroy_node()
+                rclpy.shutdown()
+                return 0
+        if state == 10:
+            logger.info("State 10: flipping the die")
+            state, result = state_10_callback(demo_node, logger, motion_client_node, vision_client_node, die_pose)
+            if result != MoveItErrorCodes.SUCCESS:
+                logger.error(f"Failed to reach home configuration: {result}")
+                motion_client_node.destroy_node()
+                vision_client_node.destroy_node()
+                demo_node.destroy_node()
+                rclpy.shutdown()
+                return 0
+            logger.info("Flip completed, back to die evaluation")
+        if state == 20:
+            logger.info("State 20: evaluating next rotations to do")
+            rot_cnt = 1
+            state, result = state_20_callback(demo_node, logger, motion_client_node, die_pose)
+            if result != MoveItErrorCodes.SUCCESS:
+                logger.error(f"Failed to reach home configuration: {result}")
+                motion_client_node.destroy_node()
+                vision_client_node.destroy_node()
+                demo_node.destroy_node()
+                rclpy.shutdown()
+                return 0
+            logger.info("evaluation completed, back to die evaluation")
+        if state == 30:
+            rot_cnt = 0
+            state, result = state_30_callback(demo_node, logger, motion_client_node, vision_client_node, die_pose)
+            if result != MoveItErrorCodes.SUCCESS:
+                logger.error(f"Failed to reach home configuration: {result}")
+                motion_client_node.destroy_node()
+                vision_client_node.destroy_node()
+                demo_node.destroy_node()
+                rclpy.shutdown()
+                return 0
+            logger.info("rotation complete, back to evaluation")
 
-    #     if state == 100:
-    #         logger.info("State 100: going back home")
-    #         result = state_100_callback(demo_node, logger, motion_client_node, home_joints)
+        if state == 100:
+            logger.info("State 100: going back home")
+            result = state_100_callback(demo_node, logger, motion_client_node, home_joints)
 
-    #         if result != MoveItErrorCodes.SUCCESS:
-    #             logger.error(f"Failed to reach home configuration: {result}")
-    #             motion_client_node.destroy_node()
-    #             vision_client_node.destroy_node()
-    #             demo_node.destroy_node()
-    #             rclpy.shutdown()
-    #             return 0
-    #         logger.info("task completed successfully")
-    # --- 1) Dice Identification
-    reached_goal, stalled = motion_client_node.gripper_command(position=0.0)  # 0.0 = closed
-
-    num, dice_pose, success = vision_client_node.dice_identification()
-    if not success:
-        logger.error('Dice identification failed')
-        motion_client_node.destroy_node()
-        vision_client_node.destroy_node()
-        demo_node.destroy_node()
-        rclpy.shutdown()
-        return 0
-
-    logger.error(f'Dice position {dice_pose.pose.position.x}, {dice_pose.pose.position.y}, {dice_pose.pose.position.z}')
-    logger.error(f'Dice orientation {dice_pose.pose.orientation}')
-    logger.error(f'Dice number {num}')
-
-    result = pose_movement(demo_node, logger, motion_client_node, dice_pose, "pose 1", [], [])
-    # if result != MoveItErrorCodes.SUCCESS:
-    #     logger.error(f"Failed to reach pose 1: {result}")
-    #     motion_client_node.destroy_node()
-    #     vision_client_node.destroy_node()
-    #     demo_node.destroy_node()
-    #     rclpy.shutdown()
-    #     return 0
-
-    logger.info(f"Pose 1 reached: {result}")
-
-    logger.info("Closing gripper...")
-    reached_goal, stalled = motion_client_node.gripper_command(position=0.6)  # 0.0 = closed
-    logger.info(f"Gripper closed (reached_goal={reached_goal}, stalled={stalled})")
-
-    result = motion_client_node.move_to_joint(place_pos_nearing)
-    result = motion_client_node.move_to_joint(place_pos)
-    reached_goal, stalled = motion_client_node.gripper_command(position=0.0)  # 0.0 = closed
-
-#     # logger.info("Attaching object...")
-#     # success = motion_client_node.attach_object("dice", "tool0")  # "tool0" is the default TCP frame of UR10e
-#     # logger.info(f"Attach success: {success}")
-
-#     # logger.info("Moving to evaluation configuration...")
-#     # result = motion_client_node.move_to_joint(eval_pos)
-#     # logger.info(f"Configuration reached: {result}")
-
-#     # num, dice_pose, success = vision_client_node.dice_identification()
-#     # if not success:
-#     #     logger.error('Dice identification failed')
-#     #     motion_client_node.destroy_node()
-#     #     vision_client_node.destroy_node()
-#     #     demo_node.destroy_node()
-#     #     rclpy.shutdown()
-#     #     return 0
-
-#     # logger.error(f'Dice position {dice_pose.pose.position.x}, {dice_pose.pose.position.y}, {dice_pose.pose.position.z}')
-#     # logger.error(f'Dice orientation {dice_pose.pose.orientation}')
-#     # logger.error(f'Dice number {num}')
-
-
-#     logger.info("Moving to place configuration...")
-#     result = motion_client_node.move_to_joint(place_pos_rotate)
-#     logger.info(f"Configuration reached: {result}")
-
-#     #   # --- 5) Open gripper + detach object ---
-#     # logger.info("Opening gripper...")
-#     # reached_goal, stalled = motion_client_node.gripper_command(position=0.045)  # 0.045 = open, adjust depending on gripper model
-#     # logger.info(f"Gripper opened (reached_goal={reached_goal}, stalled={stalled})")
-
-#     # logger.info("Detaching object...")
-#     # success = motion_client_node.detach_object("dice")
-#     # logger.info(f"Detach success: {success}")
-#     # logger.info("Moving to home configuration...")
-#     # result = motion_client_node.move_to_joint(home_joints)
-#     # logger.info(f"Home reached: {result}")
-
-#     # final_quat_array = scipy_rotation(dice_pose.pose.orientation, 'z', 90)
-#     # pick_pose.pose.orientation.x = final_quat_array[0]
-#     # pick_pose.pose.orientation.y = final_quat_array[1]
-#     # pick_pose.pose.orientation.z = final_quat_array[2]
-#     # pick_pose.pose.orientation.w = final_quat_array[3]
-
-#     # logger.info("Moving to pick pose number 2...")
-#     # result = motion_client_node.move_to_pose(pick_pose, cartesian_motion=True)
-#     # if result != MoveItErrorCodes.SUCCESS:
-#     #     logger.error(f"Failed to reach pick pose number 2: {result}")
-#     #     motion_client_node.destroy_node()
-#     #     vision_client_node.destroy_node()
-#     #     demo_node.destroy_node()
-#     #     rclpy.shutdown()
-#     #     return 0
-
-#     # logger.info(f"Pick pose number 2 reached: {result}")
-
-    
-#     # --- 3) Close gripper + attach object ---
-#     # logger.info("Closing gripper...")
-#     # reached_goal, stalled = motion_client_node.gripper_command(position=0.20)  # 0.0 = closed
-#     # logger.info(f"Gripper closed (reached_goal={reached_goal}, stalled={stalled})")
-
-#     # logger.info("Attaching object...")
-#     # success = motion_client_node.attach_object("dice", "tool0")  # "tool0" is the default TCP frame of UR10e
-#     # logger.info(f"Attach success: {success}")
-
-#     # Create a copy of pick_pose for pick_pose_3
-#     # pick_pose_3 = PoseStamped()
-#     # pick_pose_3.header = pick_pose.header
-#     # pick_pose_3.pose.position.x = pick_pose.pose.position.x
-#     # pick_pose_3.pose.position.y = pick_pose.pose.position.y
-#     # pick_pose_3.pose.position.z = pick_pose.pose.position.z
-#     # pick_pose_3.pose.orientation.x = pick_pose.pose.orientation.x
-#     # pick_pose_3.pose.orientation.y = pick_pose.pose.orientation.y
-#     # pick_pose_3.pose.orientation.z = pick_pose.pose.orientation.z
-#     # pick_pose_3.pose.orientation.w = pick_pose.pose.orientation.w
-#     # pick_pose_3.pose.position.z += 0.2  # Lift the dice 20 cm
-    
-#     # logger.info("Moving to pick pose number 3...")
-#     # result = motion_client_node.move_to_pose(pick_pose_3, cartesian_motion=True)
-#     # if result != MoveItErrorCodes.SUCCESS:
-#     #     logger.error(f"Failed to reach pick pose number 3: {result}")
-#     #     motion_client_node.destroy_node()
-#     #     vision_client_node.destroy_node()
-#     #     demo_node.destroy_node()
-#     #     rclpy.shutdown()
-#     #     return 0
-
-#     # logger.info(f"Pick pose number 3 reached: {result}")
-
-#     # read_joint_states_once()
-#     # current_joints = joint_states_data['positions']
-#     # goal_joints = list(current_joints)[1:]
-#     # # Shift elements 1, 2, 3 to the end of the list
-#     # goal_joints = list(goal_joints)
-#     # # Shift elements 1, 2, 3 to the end of the list
-#     # goal_joints = goal_joints[1:] + goal_joints[0:1]
-#     # goal_joints = goal_joints[::-1]
-#     # # Convert all joint values from radians to degrees for logging
-#     # goal_joints_deg = [joint * 180 / math.pi for joint in goal_joints]
-#     # logger.info(f"goal joints (deg): {goal_joints_deg}")
-#     # logger.info(f"goal_joint 2: {goal_joints[4]}")
-#     # goal_joints[4] += math.pi/2  # Rotate joint 3 by 90 degrees
-#     # logger.info(f"goal_joint 2: {goal_joints[4]}")
-#     # goal_joints_deg = [joint * 180 / math.pi for joint in goal_joints]
-
-#     # logger.info(f"goal joints: {goal_joints_deg}")
-#     # logger.info(f"home joints type: {type(home_joints)}")
-#     # logger.info(f"goal joints type: {type(goal_joints)}")
-
-#     # # logger.info("Moving to rotate pose number 2...")
-#     # # result = motion_client_node.move_to_joint(goal_joints)
-#     # if result != MoveItErrorCodes.SUCCESS:
-#     #     logger.error(f"Failed to reach rotate pose number 2: {result}")
-#     #     motion_client_node.destroy_node()
-#     #     vision_client_node.destroy_node()
-#     #     demo_node.destroy_node()
-#     #     rclpy.shutdown()
-#     #     return 0
-
-# #     logger.info(f"Rotate pose number 2 reached: {result}")
-# #     time.sleep(0.5)
-# #     place_pose = PoseStamped()
-# #     place_pose.header.frame_id = "world"
-# #     place_pose.header.stamp = demo_node.get_clock().now().to_msg()
-# #     place_pose.pose.position.x = pick_pose.pose.position.x + 0.2
-# #     place_pose.pose.position.y = pick_pose.pose.position.y + 0.2        
-# #     place_pose.pose.position.z = pick_pose.pose.position.z
-# #     place_pose.pose.orientation.x = pick_pose.pose.orientation.x
-# #     place_pose.pose.orientation.y = pick_pose.pose.orientation.y
-# #     place_pose.pose.orientation.z = pick_pose.pose.orientation.z
-# #     place_pose.pose.orientation.w = pick_pose.pose.orientation.w
-# #     logger.info("Moving to place pose...")
-
-# #     result = motion_client_node.move_to_pose(place_pose, cartesian_motion=True)
-# #     if result != MoveItErrorCodes.SUCCESS:
-# #         logger.error(f"Failed to reach home configuration: {result}")
-# #         motion_client_node.destroy_node()
-# #         vision_client_node.destroy_node() 
-# #         demo_node.destroy_node()
-# #         rclpy.shutdown()
-# #         return 0
-
-# #     logger.info(f"Pick pose reached: {result}")
-# # #     # --- 4) Move to another pose (place pose) ---
-# #     place_pose = PoseStamped()
-# #     place_pose.header.frame_id = "tip"
-# #     place_pose.header.stamp = demo_node.get_clock().now().to_msg()
-# #     place_pose.pose.position.x = 0.0
-# #     place_pose.pose.position.y = 0.0
-# #     place_pose.pose.position.z = -0.1
-# #     place_pose.pose.orientation.x = 0.0
-# #     place_pose.pose.orientation.y = 0.0
-# #     place_pose.pose.orientation.z = 0.0
-# #     place_pose.pose.orientation.w = 1.0
-
-# #     logger.info("Moving to place pose...")
-# #     result = motion_client_node.move_to_pose(place_pose, cartesian_motion=True)
-# #     logger.info(f"Place pose reached: {result}")
-# #     if result != MoveItErrorCodes.SUCCESS:
-# #         logger.error(f"Failed to reach home configuration: {result}")
-# #         motion_client_node.destroy_node()
-# #         vision_client_node.destroy_node()
-# #         demo_node.destroy_node()
-# #         rclpy.shutdown()
-# #         return 0
-
-# #     # --- 5) Open gripper + detach object ---
-#     # logger.info("Opening gripper...")
-#     # reached_goal, stalled = motion_client_node.gripper_command(position=0.045)  # 0.045 = open, adjust depending on gripper model
-#     # logger.info(f"Gripper opened (reached_goal={reached_goal}, stalled={stalled})")
-
-#     # logger.info("Detaching object...")
-#     # success = motion_client_node.detach_object("dice")
-#     # logger.info(f"Detach success: {success}")
+            if result != MoveItErrorCodes.SUCCESS:
+                logger.error(f"Failed to reach home configuration: {result}")
+                motion_client_node.destroy_node()
+                vision_client_node.destroy_node()
+                demo_node.destroy_node()
+                rclpy.shutdown()
+                return 0
+            logger.info("task completed successfully")
 
     motion_client_node.destroy_node()
     rclpy.shutdown()
